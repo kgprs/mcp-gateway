@@ -138,6 +138,24 @@ func (cp *clientPool) ReleaseClient(client mcpclient.Client) {
 	}
 }
 
+func (cp *clientPool) ClearCachedServer(serverName string) {
+	cp.clientLock.Lock()
+	defer cp.clientLock.Unlock()
+	
+	// Remove all entries for this server
+	for key := range cp.keptClients {
+		if key.serverName == serverName {
+			// Close existing client gracefully
+			if kc, exists := cp.keptClients[key]; exists {
+				if client, err := kc.Getter.GetClient(context.Background()); err == nil {
+					client.Session().Close()
+				}
+			}
+			delete(cp.keptClients, key)
+		}
+	}
+}
+
 func (cp *clientPool) Close() {
 	cp.clientLock.Lock()
 	existingMap := cp.keptClients

@@ -17,12 +17,12 @@ import (
 	"github.com/docker/mcp-gateway/cmd/docker-mcp/internal/logs"
 )
 
-func Callbacks(logCalls, blockSecrets bool, interceptors []Interceptor) []mcp.Middleware[*mcp.ServerSession] {
+func Callbacks(logCalls, blockSecrets bool, interceptors []Interceptor, clientPool ClientPoolClearer) []mcp.Middleware[*mcp.ServerSession] {
 	var middleware []mcp.Middleware[*mcp.ServerSession]
 
 	// Always add GitHub unauthorized interceptor first
 	// This ensures GitHub 401 responses are always handled with OAuth links
-	middleware = append(middleware, GitHubUnauthorizedMiddleware())
+	middleware = append(middleware, GitHubUnauthorizedMiddleware(clientPool))
 
 	// Add custom interceptors
 	for _, interceptor := range interceptors {

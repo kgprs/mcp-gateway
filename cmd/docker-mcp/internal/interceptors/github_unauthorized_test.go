@@ -10,13 +10,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockClientPoolClearer struct {
+	clearedServers []string
+}
+
+func (m *mockClientPoolClearer) ClearCachedServer(serverName string) {
+	m.clearedServers = append(m.clearedServers, serverName)
+}
+
 func TestGitHubUnauthorizedMiddleware(t *testing.T) {
+	mockClientPool := &mockClientPoolClearer{}
 	t.Run("ignores non-tools-call methods", func(t *testing.T) {
 		mockHandler := func(ctx context.Context, session *mcp.ServerSession, method string, params mcp.Params) (mcp.Result, error) {
 			return &mcp.ListResourcesResult{}, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "resources/list", nil)
@@ -31,7 +40,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			return nil, expectedErr
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -51,7 +60,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			return expectedResult, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -71,7 +80,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			return expectedResult, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -90,7 +99,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			}, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -117,7 +126,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			}, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -146,7 +155,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			}, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})
@@ -174,7 +183,7 @@ func TestGitHubUnauthorizedMiddleware(t *testing.T) {
 			}, nil
 		}
 
-		middleware := GitHubUnauthorizedMiddleware()
+		middleware := GitHubUnauthorizedMiddleware(mockClientPool)
 		wrappedHandler := middleware(mockHandler)
 
 		result, err := wrappedHandler(context.Background(), nil, "tools/call", &mcp.CallToolParams{})

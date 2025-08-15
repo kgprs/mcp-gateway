@@ -11,6 +11,11 @@ import (
 	"github.com/docker/mcp-gateway/cmd/docker-mcp/internal/desktop"
 )
 
+// ClientPoolClearer interface for clearing cached MCP server clients
+type ClientPoolClearer interface {
+	ClearCachedServer(serverName string)
+}
+
 // isAuthenticationError checks if a text contains authentication-related error messages
 func isAuthenticationError(text string) bool {
 	// Check for any 401 error from GitHub API
@@ -23,7 +28,7 @@ func isAuthenticationError(text string) bool {
 
 // GitHubUnauthorizedMiddleware creates middleware that intercepts 401 unauthorized responses
 // from the GitHub MCP server and returns the OAuth authorization link
-func GitHubUnauthorizedMiddleware() mcp.Middleware[*mcp.ServerSession] {
+func GitHubUnauthorizedMiddleware(clientPool ClientPoolClearer) mcp.Middleware[*mcp.ServerSession] {
 	return func(next mcp.MethodHandler[*mcp.ServerSession]) mcp.MethodHandler[*mcp.ServerSession] {
 		return func(ctx context.Context, session *mcp.ServerSession, method string, params mcp.Params) (mcp.Result, error) {
 			// Only intercept tools/call method
@@ -52,8 +57,8 @@ func GitHubUnauthorizedMiddleware() mcp.Middleware[*mcp.ServerSession] {
 					continue
 				}
 				if isAuthenticationError(textContent.Text) {
-					// Start OAuth flow and wait for completion
-					return handleOAuthFlow(ctx)
+					// Start OAuth flow and clear cached GitHub client
+					return handleOAuthFlow(ctx, clientPool)
 				}
 			}
 
@@ -63,7 +68,10 @@ func GitHubUnauthorizedMiddleware() mcp.Middleware[*mcp.ServerSession] {
 }
 
 // handleOAuthFlow manages the simplified OAuth flow
-func handleOAuthFlow(_ context.Context) (*mcp.CallToolResult, error) {
+func handleOAuthFlow(_ context.Context, clientPool ClientPoolClearer) (*mcp.CallToolResult, error) {
+	// Clear cached GitHub server to force fresh container on next call
+	clientPool.ClearCachedServer("github-official")
+	
 	// Get OAuth URL without opening browser
 	authURL, err := getGitHubOAuthURL()
 	if err != nil {
